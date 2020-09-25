@@ -436,4 +436,91 @@ describe("table Entity APIs test", () => {
       }
     );
   });
+  /*
+
+  it("Group Entity Transactions, multiple inserts, @loki", done => {
+
+    function insertEntities (tableService, table, entities, callback) {
+      var batch = new TableBatch();
+      var returnEntities = [];
+    
+      for(var i = 0; i < entities.length; i++) {
+        batch.insertEntity(entities[i], {echoContent: true});
+      }
+    
+      tableService.executeBatch(table, batch, function (error, insertEntities, response) {
+        assert.equal(error, null);
+        assert.notEqual(insertEntities, null);
+        assert.equal(response.statusCode, HttpConstants.HttpResponseCodes.Accepted);
+    
+        for(var i = 0; i < insertEntities.length; i++) {
+          returnEntities.push(insertEntities[i].entity);
+        }
+    
+        callback(returnEntities);
+      });
+    }
+  }
+    /*
+    // const tableBatch: Azure.TableBatch = {};
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "merge1",
+      myValue: "oldValue"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.executeBatch(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        const entityUpdate = {
+          PartitionKey: "part1",
+          RowKey: "merge1",
+          mergeValue: "newValue"
+        };
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.insertOrMergeEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                // TODO When QueryEntity is done - validate Entity Properties
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+    
+  }); */
+
+  // A change set is a group of one or more insert, update, or delete operations.
+
+  // A batch is a container of operations, including one or more change sets and query operations.
+
+  // The Table service supports a subset of the functionality defined by the OData specification:
+
+  //  The Table service supports only a single change set within a batch. The change set can include multiple insert, update, and delete operations. If a batch includes more than one change set, the first change set will be processed by the service, and additional change sets will be rejected with status code 400 (Bad Request).
+
+  // Multiple operations against a single entity are not permitted within a change set.
+
+  // Note that a query operation is not permitted within a batch that contains insert, update, or delete operations; it must be submitted singly in the batch.
+
+  // Operations within a change set are processed atomically; that is, all operations in the change set either succeed or fail. Operations are processed in the order they are specified in the change set.
+
+  // The Table service does not support linking operations in a change set.
+
+  // The Table service supports a maximum of 100 operations in a change set.
 });
