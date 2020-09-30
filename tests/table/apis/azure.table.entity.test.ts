@@ -33,8 +33,6 @@ describe("table Entity APIs test", () => {
   // );
 
   // let server: TableServer;
-  // const accountName = "asynccopiertesttarget";
-  // const sharedKey = "hPSUF+luXpIjwCM3vibjWW9/i87JELpYOqxGOAO8OJzuN2X1Mq9JgTBaAwNVioGPtQeFgTVKhkcCrKlUjByLCA==";
   const connectionString = `<your Azure Connection String here>`;
 
   const tableService = Azure.createTableService(connectionString);
