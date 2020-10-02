@@ -17,6 +17,23 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
+// Create Entity for tests
+function createBasicEntityForTest() {
+  return {
+    PartitionKey: eg.String("part1"),
+    RowKey: eg.String(getUniqueName("row")),
+    myValue: eg.String("value1")
+  };
+}
+
+const wildCardEtag = {
+  ".metadata": {
+    etag: "*" // forcing unconditional etag match to delete
+  }
+};
+
+const eg = Azure.TableUtilities.entityGenerator;
+
 describe("table Entity APIs test", () => {
   // TODO: Create a server factory as tests utils
   // const protocol = "http";
@@ -33,7 +50,9 @@ describe("table Entity APIs test", () => {
   // );
 
   // let server: TableServer;
-  const connectionString = `<your Azure Connection String here>`;
+  const connectionString =
+    process.env.azure_test_connection_string ||
+    `<your Azure Connection String here>`;
 
   const tableService = Azure.createTableService(connectionString);
 
@@ -77,30 +96,17 @@ describe("table Entity APIs test", () => {
   // a starting point for delete and query entity APIs
   it("Should insert new Entity, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
-    const entity = {
-      PartitionKey: "part1",
-      RowKey: getUniqueName("row"),
-      myValue: "value1"
-    };
+    const entity = createBasicEntityForTest();
     tableService.insertEntity(tableName, entity, (error, result, response) => {
       assert.equal(response.statusCode, 201);
       done();
     });
   });
 
-  it.only("Should delete an Entity using etag wildcard, @loki", done => {
+  it("Should delete an Entity using etag wildcard, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
 
-    const deleteTestEntityRowKey = getUniqueName("row");
-
-    const entityOld = {
-      PartitionKey: "part1",
-      RowKey: deleteTestEntityRowKey,
-      myValue: "somevalue",
-      ".metadata": {
-        etag: "*" // forcing unconditional etag match to delete
-      }
-    };
+    const entityOld = createBasicEntityForTest();
 
     tableService.insertEntity(
       tableName,
@@ -114,14 +120,7 @@ describe("table Entity APIs test", () => {
       maintained by the server, indicating that the entity has not been modified since it was retrieved by the client.
       To force an unconditional delete, set If-Match to the wildcard character (*). */
 
-        const entityToDelete = {
-          PartitionKey: "part1",
-          RowKey: deleteTestEntityRowKey,
-          myValue: "somevalue",
-          ".metadata": {
-            etag: "*" // forcing unconditional etag match to delete
-          }
-        };
+        const entityToDelete = { ...entityOld, ...wildCardEtag };
 
         tableService.deleteEntity(
           tableName,
@@ -137,19 +136,14 @@ describe("table Entity APIs test", () => {
 
   it("Should not delete an Entity not matching Etag, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
-    const entityInsert = {
-      PartitionKey: "part1",
-      RowKey: "row2",
-      myValue: "shouldNotMatchetag"
-    };
-    const entityDelete = {
-      PartitionKey: "part1",
-      RowKey: "row2",
-      myValue: "shouldNotMatchetag",
+    const entityInsert = createBasicEntityForTest();
+
+    const shouldNotMatch = {
       ".metadata": {
         etag: "0x2252C97588D4000"
       }
     };
+    const entityDelete = { ...entityInsert, ...shouldNotMatch };
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -178,11 +172,7 @@ describe("table Entity APIs test", () => {
 
   it("Should delete a matching Etag, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
-    const entityInsert = {
-      PartitionKey: "part1",
-      RowKey: "row3",
-      myValue: "shouldMatchEtag"
-    };
+    const entityInsert = createBasicEntityForTest();
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -215,23 +205,22 @@ describe("table Entity APIs test", () => {
   });
 
   it("Update an Entity that exists, @loki", done => {
-    const entityInsert = {
-      PartitionKey: "part1",
-      RowKey: "row3",
-      myValue: "oldValue"
-    };
+    const entityInsert = createBasicEntityForTest();
     tableService.insertEntity(
       tableName,
       entityInsert,
       (error, result, insertresponse) => {
         if (!error) {
           requestOverride.headers = {};
+          const entityReplace = entityInsert;
+          entityReplace.myValue = eg.String("newValue");
           tableService.replaceEntity(
             tableName,
-            { PartitionKey: "part1", RowKey: "row3", myValue: "newValue" },
+            entityReplace,
             (updateError, updateResult, updateResponse) => {
               if (!updateError) {
                 assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                // ToDo: Query Entity and check value once query entity is implemented.
                 done();
               } else {
                 assert.ifError(updateError);
@@ -248,6 +237,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("Update an Entity that does not exist, @loki", done => {
+    // ToDo: Tidy up test and decouple from previous test.
     tableService.replaceEntity(
       tableName,
       { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
@@ -462,6 +452,36 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          done();
+        }
+      }
+    );
+  });
+
+  it.only("Simple batch test: Inserts multiple entities as a batch, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
           // TODO When QueryEntity is done - validate Entity Properties
           done();
         }
