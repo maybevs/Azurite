@@ -483,7 +483,19 @@ describe("table Entity APIs test", () => {
         } else {
           assert.equal(updateResponse.statusCode, 202); // No content
           // TODO When QueryEntity is done - validate Entity Properties
-          done();
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.equal(result, null);
+              }
+              done();
+            }
+          );
         }
       }
     );
