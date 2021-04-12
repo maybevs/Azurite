@@ -257,6 +257,7 @@ export class TableBatchSerialization extends BatchSerialization {
       serializedResponses
     );
 
+    // this can probably be removed now
     if (null !== response.eTag && undefined !== response.eTag) {
       serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
     }

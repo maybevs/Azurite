@@ -26,7 +26,7 @@ function createBasicEntityForTest(): TestEntity {
   return new TestEntity("part1", getUniqueName("row"), "value1");
 }
 
-class TestEntity {
+class TestEntity implements ITableEntity {
   public PartitionKey: Azure.TableUtilities.entityGenerator.EntityProperty<
     string
   >;
@@ -37,6 +37,25 @@ class TestEntity {
     this.RowKey = eg.String(row);
     this.myValue = eg.String(value);
   }
+  [key: string]:
+    | any
+    | string
+    | number
+    | boolean
+    | Azure.TableUtilities.entityGenerator.EntityProperty<string>
+    | undefined;
+}
+
+interface ITableEntity {
+  PartitionKey?: Azure.TableUtilities.entityGenerator.EntityProperty<string>;
+  RowKey?: Azure.TableUtilities.entityGenerator.EntityProperty<string>;
+  [key: string]:
+    | any
+    | string
+    | number
+    | boolean
+    | Azure.TableUtilities.entityGenerator.EntityProperty<string>
+    | undefined;
 }
 
 const eg = Azure.TableUtilities.entityGenerator;
@@ -1015,5 +1034,148 @@ describe("table Entity APIs test", () => {
         }
       );
     });
+  });
+
+  // https://github.com/Azure/Azurite/issues/745
+  it.only("Inserts 3, then Updates 3 entities via a batch and then validates the updated etags & values with a query, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    batchEntity1.myValue._ = "value1";
+    batchEntity2.myValue._ = "value2";
+    batchEntity3.myValue._ = "value3";
+
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.strictEqual(updateResponse.statusCode, 202);
+          // We need the etag value to check
+          let currentEtag_entity1: string | undefined;
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result, response) => {
+              if (error) {
+                assert.ifError(error);
+                done();
+              } else if (result) {
+                const entity1: TestEntity = result;
+                assert.strictEqual(entity1.myValue._, batchEntity1.myValue._);
+                currentEtag_entity1 = entity1[".metadata"].etag;
+                // LogicApps are using PUT with If-Match header
+                const entityBatch2: Azure.TableBatch = new Azure.TableBatch();
+
+                // https://docs.microsoft.com/en-us/azure/cosmos-db/table-storage-how-to-use-nodejs#update-an-entity
+                // If-Match is not being set by the SDK?
+                entity1.myValue._ = "value1_new";
+                entity1[".metadata"].etag = currentEtag_entity1; // redundant
+                entityBatch2.replaceEntity(entity1);
+                batchEntity2.myValue._ = "value2_new";
+                entityBatch2.replaceEntity(batchEntity2);
+                batchEntity3.myValue._ = "value3_new";
+                entityBatch2.replaceEntity(batchEntity3);
+
+                tableService.executeBatch(
+                  tableName,
+                  entityBatch2,
+                  (updateError2, updateResult2, updateResponse2) => {
+                    tableService.retrieveEntity<TestEntity>(
+                      tableName,
+                      batchEntity1.PartitionKey._,
+                      batchEntity1.RowKey._,
+                      (error1, result1, response1) => {
+                        if (error1) {
+                          assert.ifError(error1);
+                          done();
+                        } else {
+                          const entity1_updated: TestEntity = result1;
+                          assert.strictEqual(
+                            entity1_updated.myValue._,
+                            entity1.myValue._,
+                            "Value did not update"
+                          );
+                          assert.notStrictEqual(
+                            entity1_updated[".metadata"].etag,
+                            currentEtag_entity1,
+                            "Etag did not update"
+                          );
+                          tableService.retrieveEntity<TestEntity>(
+                            tableName,
+                            batchEntity2.PartitionKey._,
+                            batchEntity2.RowKey._,
+                            (error2, result2) => {
+                              if (error2) {
+                                assert.ifError(error2);
+                                done();
+                              } else {
+                                const entity2_updated: TestEntity = result2;
+                                assert.strictEqual(
+                                  entity2_updated.myValue._,
+                                  batchEntity2.myValue._,
+                                  "Value did not update"
+                                );
+                                // when we update 3 entities like this, they all have the same etag
+                                // this might be fragile...
+                                assert.notStrictEqual(
+                                  entity2_updated[".metadata"].etag,
+                                  currentEtag_entity1,
+                                  "Etag did not update"
+                                );
+                                tableService.retrieveEntity<TestEntity>(
+                                  tableName,
+                                  batchEntity3.PartitionKey._,
+                                  batchEntity3.RowKey._,
+                                  (error3, result3) => {
+                                    if (error3) {
+                                      assert.ifError(error3);
+                                      done();
+                                    } else {
+                                      const entity3_updated: TestEntity = result3;
+                                      assert.strictEqual(
+                                        entity3_updated.myValue._,
+                                        batchEntity3.myValue._,
+                                        "Value did not update"
+                                      );
+                                      // when we update 3 entities like this, they all have the same etag
+                                      // this might be fragile...
+                                      assert.notStrictEqual(
+                                        entity3_updated[".metadata"].etag,
+                                        currentEtag_entity1,
+                                        "Etag did not update"
+                                      );
+                                      done();
+                                    }
+                                  }
+                                );
+                              }
+                            }
+                          );
+                        }
+                      }
+                    );
+                  }
+                );
+              }
+            }
+          );
+        }
+      }
+    );
   });
 });
