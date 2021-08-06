@@ -21,6 +21,8 @@ import { truncatedISO8061Date } from "../../common/utils/utils";
  * we then need to figure out how to do this for blob, and what can be shared.
  * We set several headers in the responses to the same values that we see returned
  * from the Azure Storage Service.
+ * This class is responsible for both deserialization and serialization.
+ * I kept the name short.
  *
  * @export
  * @class TableBatchSerialization
@@ -66,6 +68,7 @@ export class TableBatchSerialization extends BatchSerialization {
 
     // This goes through each operation in the the request and maps the content
     // of the request by deserializing it into a BatchOperation Type
+    // we need this information for the table batch dispatcher logic
     const batchOperations: TableBatchOperation[] = subRequests.map(
       (subRequest) => {
         let requestType: RegExpMatchArray | null = [];

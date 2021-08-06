@@ -55,6 +55,7 @@ export default class TableBatchOrchestrator {
     this.batchOperations = this.serialization.deserializeBatchRequest(
       batchRequestBody
     );
+    // ToDo: this should be moved out to a validation module for batch / table batch
     if (this.batchOperations.length > 100) {
       this.wasError = true;
       this.errorResponse = this.serialization.serializeGeneralRequestError(
@@ -76,11 +77,13 @@ export default class TableBatchOrchestrator {
    * @memberof TableBatchManager
    */
   private async submitRequestsToHandlers(): Promise<void> {
+    // first we create "request objects" for the BatchOperations which were deserialized
     this.batchOperations.forEach((operation) => {
       const request: BatchRequest = new BatchRequest(operation);
       this.requests.push(request);
     });
 
+    // Next we submit the requests to the dispatcher
     let contentID = 1; // ToDO: validate contentID starts at 1 for batch
     if (this.requests.length > 0) {
       for (const singleReq of this.requests) {
@@ -468,7 +471,7 @@ export default class TableBatchOrchestrator {
     const updatedContext = batchContextClone as TableStorageContext;
 
     if (null !== partitionKey && null != rowKey) {
-      // ToDo: this is hideous... but we need the params on the request object,
+      // ToDo: this is very ugly... but we need the params on the request object,
       // as they percolate through and are needed for the final serialization
       // currently, because of the way we deconstruct / deserialize, we only
       // have the right model at a very late stage in processing
