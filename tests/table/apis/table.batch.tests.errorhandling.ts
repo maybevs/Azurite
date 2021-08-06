@@ -1,27 +1,38 @@
 // Tests in this file are using @azure/data-tables
 
 import * as assert from "assert";
-import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
+import { TableClient } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName
-} from "../../testutils";
+import { getUniqueName } from "../../testutils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
 } from "./AzureDataTablesTestEntity";
 import {
+  createConnectionStringForDataTablesTest,
+  createSharedKeyCredentialForDataTablesTest,
   createTableServerForTestHttps,
-  createUniquePartitionKey,
-  HOST,
-  PORT
+  createUniquePartitionKey
 } from "./table.entity.test.utils";
 
 // Set true to enable debug log
 configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
+
+function createDataTablesTableTestClient(tableName: string): TableClient {
+  const tableClient = new TableClient(
+    createConnectionStringForDataTablesTest(testLocalAzuriteInstance),
+    tableName,
+    createSharedKeyCredentialForDataTablesTest(testLocalAzuriteInstance)
+  );
+  return tableClient;
+}
 
 describe("table Entity APIs test", () => {
   let server: TableServer;
@@ -49,10 +60,8 @@ describe("table Entity APIs test", () => {
       createBasicEntityForTest(partitionKey)
     ];
 
-    const badTableClient = new TableClient(
-      `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
-      "noExistingTable",
-      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+    const badTableClient = createDataTablesTableTestClient(
+      getUniqueName("tabledoesnotexist")
     );
 
     // await badTableClient.create(); // deliberately do not create table
@@ -76,11 +85,7 @@ describe("table Entity APIs test", () => {
       testEntities.push(createBasicEntityForTest(partitionKey));
     }
 
-    const tooManyRequestsClient = new TableClient(
-      `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
-      tableName,
-      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
-    );
+    const tooManyRequestsClient = createDataTablesTableTestClient(tableName);
 
     await tooManyRequestsClient.create();
     const batch = tooManyRequestsClient.createBatch(partitionKey);

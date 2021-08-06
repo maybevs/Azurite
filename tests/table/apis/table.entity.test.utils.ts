@@ -6,6 +6,7 @@ import {
 import { TestEntity } from "./TestEntity";
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
+import { TablesSharedKeyCredential } from "@azure/data-tables";
 
 export const PROTOCOL = "http";
 export const HOST = "127.0.0.1";
@@ -17,6 +18,10 @@ const connectionString =
   `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
   `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME};`;
 const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
+const AZURE_DATATABLES_STORAGE_STRING: string =
+  "AZURE_DATATABLES_STORAGE_STRING";
+const DATATABLES_ACCOUNT_NAME: string = "DATATABLES_ACCOUNT_NAME";
+const DATATABLES_ACCOUNT_KEY: string = "DATATABLES_ACCOUNT_KEY";
 
 const config = new TableConfiguration(
   HOST,
@@ -88,4 +93,34 @@ export function createConnectionStringForTest(dev: boolean): string {
  */
 export function createUniquePartitionKey(): string {
   return getUniqueName("datatablestests");
+}
+
+/**
+ * Provides the connection string to connect to the Azurite table server
+ * or connects to a real Azure Table Service in the cloud
+ * @export
+ * @return {*}  {string}
+ */
+export function createConnectionStringForDataTablesTest(dev: boolean): string {
+  if (dev) {
+    return `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`;
+  } else {
+    return process.env[AZURE_DATATABLES_STORAGE_STRING]!;
+  }
+}
+
+export function createSharedKeyCredentialForDataTablesTest(
+  dev: boolean
+): TablesSharedKeyCredential {
+  if (dev) {
+    return new TablesSharedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+  } else {
+    return new TablesSharedKeyCredential(
+      process.env[DATATABLES_ACCOUNT_NAME]!,
+      process.env[DATATABLES_ACCOUNT_KEY]!
+    );
+  }
 }
