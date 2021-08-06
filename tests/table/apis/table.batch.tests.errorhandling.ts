@@ -98,4 +98,28 @@ describe("table Entity APIs test", () => {
       assert.strictEqual(err.code, "InvalidInput");
     }
   });
+
+  it("All entities in a batch must have the same partition key, @loki", (done) => {
+    // const partitionKey1 = createUniquePartitionKey();
+    // const partitionKey2 = createUniquePartitionKey();
+    // const tableName: string = getUniqueName("datatables");
+    // const testEntities: AzureDataTablesTestEntity[] = [];
+
+    // testEntities.push(createBasicEntityForTest(partitionKey1));
+    // testEntities.push(createBasicEntityForTest(partitionKey2));
+
+    // const twoPartitionKeysClient = createDataTablesTableTestClient(tableName);
+
+    // await twoPartitionKeysClient.create();
+    // const batch = twoPartitionKeysClient.createBatch(partitionKey1);
+    // batch.createEntities(testEntities);
+    // // SDK Prevents this.
+    // try {
+    //   await batch.submitBatch();
+    // } catch (err) {
+    //   assert.strictEqual(err.statusCode, 400);
+    //   assert.strictEqual(err.code, "InvalidInput");
+    // }
+    done();
+  });
 });
