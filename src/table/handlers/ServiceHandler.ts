@@ -1,8 +1,9 @@
 import TableStorageContext from "../context/TableStorageContext";
-import NotImplementedError from "../errors/NotImplementedError";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
+import { parseXML } from "../generated/utils/xml";
 import { TABLE_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
@@ -90,15 +91,63 @@ export default class ServiceHandler
     options: Models.ServiceSetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ServiceSetPropertiesResponse> {
-    // TODO Refer to Blob/Queue ServiceHandler implementation
-    throw new NotImplementedError(context);
+    const tableCtx = new TableStorageContext(context);
+    const accountName = tableCtx.account!;
+
+    // TODO: deserializor has a bug that when cors is undefined,
+    // it will serialize it to empty array instead of undefined
+    const body = tableCtx.request!.getBody();
+    const parsedBody = await parseXML(body || "");
+    if (
+      !parsedBody.hasOwnProperty("cors") &&
+      !parsedBody.hasOwnProperty("Cors")
+    ) {
+      tableServiceProperties.cors = undefined;
+    }
+
+    // Azure Storage allows allowedHeaders and exposedHeaders to be empty,
+    // Azurite will set to empty string for this scenario
+    for (const cors of tableServiceProperties.cors || []) {
+      cors.allowedHeaders = cors.allowedHeaders || "";
+      cors.exposedHeaders = cors.exposedHeaders || "";
+    }
+
+    await this.metadataStore.setServiceProperties(context, {
+      ...tableServiceProperties,
+      accountName
+    });
+
+    const response: Models.ServiceSetPropertiesResponse = {
+      requestId: context.contextID,
+      statusCode: 202,
+      version: TABLE_API_VERSION,
+      clientRequestId: options.requestId
+    };
+    return response;
   }
 
   public async getStatistics(
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
-    // TODO Refer to Blob/Queue ServiceHandler implementation
-    throw new NotImplementedError(context);
+
+    if (!context.context.isSecondary) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context
+      );
+    }
+
+    const response: Models.ServiceGetStatisticsResponse = {
+      statusCode: 200,
+      requestId: context.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      geoReplication: {
+        status: Models.GeoReplicationStatusType.Live,
+        lastSyncTime: context.startTime!
+      },
+      clientRequestId: options.requestId
+    };
+    return response;
   }
 }

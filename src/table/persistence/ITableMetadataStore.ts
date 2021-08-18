@@ -31,6 +31,8 @@ interface ITable {
 
 export type Table = ITable & IOdataAnnotationsOptional;
 
+export type TableACL = Models.SignedIdentifier[];
+
 export interface IEntity {
   PartitionKey: string;
   RowKey: string;
@@ -52,6 +54,17 @@ export default interface ITableMetadataStore {
     nextTable?: string
   ): Promise<[Table[], string | undefined]>;
   deleteTable(context: Context, table: string, account: string): Promise<void>;
+  setTableACL(
+    account: string,
+    table: string,
+    context: Context,
+    queueACL?: TableACL
+  ): Promise<void>;
+  getTable(
+    account: string,
+    table: string,
+    context: Context
+  ): Promise<Table>;
   queryTableEntities(
     context: Context,
     account: string,
@@ -107,15 +120,12 @@ export default interface ITableMetadataStore {
   ): Promise<Models.TableSetAccessPolicyResponse>;
   init(): void;
   close(): void;
-  /**
-   * Get service properties for specific storage account.
-   *
-   * @param {string} account
-   * @returns {Promise<ServicePropertiesModel | undefined>}
-   * @memberof IBlobMetadataStore
-   */
   getServiceProperties(
     context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined>;
+  setServiceProperties(
+    context: Context,
+    serviceProperties: ServicePropertiesModel
+  ): Promise<ServicePropertiesModel>;
 }

@@ -17,6 +17,9 @@ const debugLogPath: string = "g:/debug.log";
 const connectionString =
   `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
   `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME};`;
+const secondaryConnectionString =
+  `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
+  `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}-secondary;`;
 const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
 const AZURE_DATATABLES_STORAGE_STRING: string =
   "AZURE_DATATABLES_STORAGE_STRING";
@@ -80,6 +83,20 @@ export function createTableServerForTestHttps(): TableServer {
 export function createConnectionStringForTest(dev: boolean): string {
   if (dev) {
     return connectionString;
+  } else {
+    return process.env[AZURE_TABLE_STORAGE]!;
+  }
+}
+
+/**
+ * Provides the connection string to connect to the Azurite table server's secondary location endpoint
+ * or connects to a real Azure Table Service in the cloud
+ * @export
+ * @return {*}  {string}
+ */
+export function createSecondaryConnectionStringForTest(dev: boolean): string {
+  if (dev) {
+    return secondaryConnectionString;
   } else {
     return process.env[AZURE_TABLE_STORAGE]!;
   }
