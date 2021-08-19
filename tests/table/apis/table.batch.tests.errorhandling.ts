@@ -71,7 +71,8 @@ describe("table Entity APIs test", () => {
     try {
       await batch.submitBatch();
     } catch (err) {
-      assert.strictEqual(err.statusCode, 400);
+      assert.strictEqual(err.response.status, 202);
+      assert.strictEqual(err.statusCode, 404);
       assert.strictEqual(err.code, "TableNotFound");
     }
   });
@@ -99,27 +100,55 @@ describe("table Entity APIs test", () => {
     }
   });
 
-  it("All entities in a batch must have the same partition key, @loki", (done) => {
-    // const partitionKey1 = createUniquePartitionKey();
+  it("All entities and operations in a batch must be different, @loki", async () => {
+    const partitionKey1 = createUniquePartitionKey();
     // const partitionKey2 = createUniquePartitionKey();
-    // const tableName: string = getUniqueName("datatables");
-    // const testEntities: AzureDataTablesTestEntity[] = [];
+    const tableName: string = getUniqueName("datatables");
 
-    // testEntities.push(createBasicEntityForTest(partitionKey1));
-    // testEntities.push(createBasicEntityForTest(partitionKey2));
+    const entity = createBasicEntityForTest(partitionKey1);
+    const sameEntitiesClient = createDataTablesTableTestClient(tableName);
 
-    // const twoPartitionKeysClient = createDataTablesTableTestClient(tableName);
+    await sameEntitiesClient.create();
+    const batch = sameEntitiesClient.createBatch(partitionKey1);
+    batch.createEntity(entity);
+    batch.updateEntity(entity, "Replace");
+    batch.updateEntity(entity, "Replace");
+    batch.updateEntity(entity, "Replace");
+    batch.updateEntity(entity, "Replace");
 
-    // await twoPartitionKeysClient.create();
-    // const batch = twoPartitionKeysClient.createBatch(partitionKey1);
-    // batch.createEntities(testEntities);
-    // // SDK Prevents this.
-    // try {
-    //   await batch.submitBatch();
-    // } catch (err) {
-    //   assert.strictEqual(err.statusCode, 400);
-    //   assert.strictEqual(err.code, "InvalidInput");
-    // }
-    done();
+    // SDK Prevents this?
+
+    await batch
+      .submitBatch()
+      .then((response) => {
+        assert.fail("we should not succeed!");
+      })
+      .catch((err) => {
+        if (err.message === "we should not succeed!") {
+          assert.notStrictEqual(
+            err.message,
+            "we should not succeed!",
+            "We should not be able to modify the same entity multiple times"
+          );
+        } else {
+          assert.strictEqual(err.statusCode, 400);
+          assert.strictEqual(err.code, "InvalidDuplicateRow");
+          // ToDo: service now responds with InvalidDuplicateRow not sure if we can match this we respond with InvalidInput
+          // "1:The batch request contains multiple changes with same row key.
+          // An entity can appear only once in a batch request.\nRequestId:146d91de-1002-0064-74d7-94543d000000\nTime:2021-08-19T08:54:15.9635302Z"
+          // now we need to ensure that the entity in the batch was not actually created
+          sameEntitiesClient
+            .getEntity(entity.partitionKey, entity.rowKey)
+            .then()
+            .catch((errGet) => {
+              assert.strictEqual(
+                errGet.statusCode,
+                404,
+                "Entity should not have been created."
+              );
+            });
+        }
+      })
+      .finally();
   });
 });

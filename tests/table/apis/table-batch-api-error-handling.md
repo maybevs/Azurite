@@ -28,8 +28,8 @@ The following list of features and behavior will serve as a checklist for testin
 
 ### ToDo:
 
-- Check if we need to observe other odata formats for errors
 - All entities in a batch must have the same PartitionKey value.
+- Check if we need to observe other odata formats for errors
 - An entity can appear only once in a batch, and only one operation may be performed against it.
   - Requires that we check both partition key and row key (as an entity key is made up of both)
 - its total payload may be no more than 4 MiB in size.
