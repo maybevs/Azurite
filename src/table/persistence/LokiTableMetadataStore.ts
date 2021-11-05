@@ -30,8 +30,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private transactionDeleteTheseEntities: Entity[] = []; // can maybe use Entity instead of any
 
   public constructor(public readonly lokiDBPath: string) {
+    const lfsa = require("../../../node_modules/lokijs/src/loki-fs-structured-adapter.js");
+    const lfsaAdapter = new lfsa();
     this.db = new Loki(lokiDBPath, {
       autosave: true,
+      adapter: lfsaAdapter,
       autosaveInterval: 5000
     });
   }

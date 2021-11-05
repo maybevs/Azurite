@@ -134,7 +134,12 @@ export function createAzureDataTablesClient(
     return new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
       tableName,
-      sharedKeyCredential
+      sharedKeyCredential,
+      {
+        retryOptions: {
+          maxRetries: 3
+        }
+      }
     );
   } else {
     return new TableClient(

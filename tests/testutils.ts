@@ -1,3 +1,4 @@
+import { generateUuid } from "@azure/ms-rest-js";
 import { StorageServiceClient } from "azure-storage";
 import { randomBytes } from "crypto";
 import { createWriteStream, readFileSync } from "fs";
@@ -11,11 +12,17 @@ export const EMULATOR_ACCOUNT_KEY =
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
 export function getUniqueName(prefix: string): string {
-  return `${prefix}${new Date().getTime()}${padStart(
-    Math.floor(Math.random() * 10000).toString(),
-    5,
-    "00000"
-  )}`;
+  // return `${prefix}${new Date().getTime()}${padStart(
+  //   Math.floor(Math.random() * 10000).toString(),
+  //   5,
+  //   "00000"
+  // )}`;
+  const uid = generateUuid()
+    .replace("-", "")
+    .replace("-", "")
+    .replace("-", "")
+    .replace("-", "");
+  return `${prefix}${uid}`;
 }
 
 /**
@@ -203,7 +210,9 @@ export function generateJWTToken(
 export function restoreBuildRequestOptions(service: any) {
   if ((service as any).__proto__.__proto__.__original_buildRequestOptions) {
     // tslint:disable-next-line: max-line-length
-    (service as any).__proto__.__proto__._buildRequestOptions = (service as any).__proto__.__proto__.__original_buildRequestOptions;
+    (service as any).__proto__.__proto__._buildRequestOptions = (
+      service as any
+    ).__proto__.__proto__.__original_buildRequestOptions;
   }
 }
 export function overrideRequest(
@@ -220,7 +229,8 @@ export function overrideRequest(
     : (service as any).__proto__.__proto__._buildRequestOptions;
 
   if (!hasOriginal) {
-    (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
+    (service as any).__proto__.__proto__.__original_buildRequestOptions =
+      original;
   }
 
   const _buildRequestOptions = original.bind(service);
