@@ -1027,6 +1027,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       [propertyName: string]: any;
     }
   ) {
+    if (Object.keys(properties).length > 255) {
+      throw StorageErrorFactory.getTooManyPropertiesError(context);
+    }
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
         if (

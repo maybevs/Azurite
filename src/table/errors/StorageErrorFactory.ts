@@ -404,4 +404,15 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getTooManyPropertiesError(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "TooManyProperties",
+      "The entity contains more properties than allowed.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

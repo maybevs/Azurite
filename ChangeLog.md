@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Adds check for more than 255 Properties on entities.
+
 ## 2022.04 Version 3.17.0
 
 General:
