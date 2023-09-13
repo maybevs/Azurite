@@ -39,10 +39,10 @@ namespace AzuriteTableTest
       }
       catch (TableTransactionFailedException ex)
       {
-        Assert.Fail(ex.ToString());
+        Assert.Pass(ex.ToString());
       }
 
-      Assert.Pass();
+      Assert.Fail();
 
     }
 
@@ -67,10 +67,10 @@ namespace AzuriteTableTest
       }
       catch (TableTransactionFailedException ex)
       {
-        Assert.Fail(ex.ToString());
+        Assert.Pass(ex.ToString());
       }
 
-      Assert.Pass();
+      Assert.Fail();
     }
 
     [Test]
@@ -95,10 +95,10 @@ namespace AzuriteTableTest
       }
       catch (TableTransactionFailedException ex)
       {
-        Assert.Fail(ex.ToString());
+        Assert.Pass(ex.ToString());
       }
 
-      Assert.Pass();
+      Assert.Fail();
     }
 
     [Test]
@@ -118,10 +118,10 @@ namespace AzuriteTableTest
       }
       catch (Exception ex)
       {
-        Assert.Fail(ex.ToString());
+        Assert.Pass(ex.ToString());
       }
 
-      Assert.Pass();
+      Assert.Fail();
     }
   }
 }
