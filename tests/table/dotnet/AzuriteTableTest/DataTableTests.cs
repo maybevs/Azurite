@@ -103,7 +103,6 @@ namespace AzuriteTableTest
       {
         Assert.Pass(ex.ToString());
       }
-
       Assert.Fail();
     }
 
